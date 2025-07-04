@@ -26,3 +26,8 @@ This tool captures network packets, displays them in real-time, and allows users
 
 ---
 
+### 🎯 User Interface
+<img src="Ui.png" width="600"/>
+
+---
+
