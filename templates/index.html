@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Network Packet Analysis</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="navbar">
+        <h1 class="dp">Network Packet Analysis</h1>
+    </div>
+    <form id="search-container">
+        <input id="interface" type="text" class="search-box" placeholder="select the network interface: (Wi-Fi /eth0 /BTH)">
+        <ul class="options">
+            <li>WI-FI</li>
+            <li>Ethernet</li>
+            <li>Bluetooth</li>
+        </ul>
+    </form>
+    <button onclick="startCapture()" class="btn">Start Capture</button>
+    <button onclick="stopCapture()" class="btn1">Stop Capture</button>
+    <a href="{{ url_for('download_packets') }}" class="btn2">Download</a>
+    <pre>
+                        Live captured packets                                               Packet details
+    </pre>
+    <div class="row">
+        <div id="results" class="container"></div>
+        <div id="details" class="container"></div>
+    </div>
+    
+    <script>
+
+        function startCapture() {
+            const iface = document.getElementById('interface').value;
+            fetch('/start_capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `interface=${encodeURIComponent(iface)}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    displayPackets(); // Start displaying captured packets after starting capture
+                })
+                .catch(error => console.error(error));
+        }
+
+        function stopCapture() {
+            fetch('/stop_capture')
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(error => console.error(error));
+        }
+
+        function displayPackets() {
+            fetch('/captured_packets')
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = '';
+                    data.forEach((packet, index) => {
+                        resultsDiv.innerHTML += `<p><a href="#" onclick="getPacketDetails(${index})">Packet ${index}</a> | Source IP: ${packet.src_ip} | Destination IP: ${packet.dst_ip} | Protocol: ${packet.protocol}</p>`;
+                    });
+                })
+                .catch(error => console.error(error));
+        }
+
+        function getPacketDetails(index) {
+            fetch(`/packet/${index}`)
+                .then(response => response.json())
+                .then(data => {
+                    const detailsDiv = document.getElementById('details');
+                    var v = document.getElementById('selectedInterface');
+                    detailsDiv.innerHTML = `<h2>Packet Details</h2>
+                                            <p>Packet Number:${index}</p>
+                                            <p>Source IP: ${data.src_ip}</p>
+                                            <p>Destination IP: ${data.dst_ip}</p>
+                                            <p>Protocol: ${data.protocol}</p>
+                                            <p>Source Port: ${data.src_port}</p>
+                                            <p>Destination Port: ${data.dst_port}</p>
+                                            <p>Payload data: ${data.payload_data}</p>
+                                            <p>Packet Length: ${data.packet_len}</p>`;
+                })
+                .catch(error => console.error(error));
+        }
+
+        setInterval(displayPackets, 1000); // Refresh the displayed packets every second
+
+        $(document).ready(function () {
+            // Start sniffing form submission
+            $('#search-container').submit(function (e) {
+                e.preventDefault();
+                var interface = $('#interface').val();
+                $.post('/start_capture', { interface: interface }, function () {
+                    setInterval(refreshPackets, 5000);
+                });
+            });
+
+        });
+
+
+    </script>
+</body>
+
+</html>
